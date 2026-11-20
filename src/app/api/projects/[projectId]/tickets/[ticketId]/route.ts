@@ -11,6 +11,7 @@ import {
   requireAuth,
   requireMembership,
   requireProjectByKey,
+  requireTicketAccess,
   requireTicketPermission,
 } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
@@ -146,8 +147,8 @@ export async function PATCH(
       return notFoundError('Ticket')
     }
 
-    // Check ticket edit permission (own ticket or any ticket)
-    await requireTicketPermission(user.id, projectId, existingTicket.creatorId, 'edit')
+    // Check ticket edit permission (any ticket, own ticket, or ticket assigned to the user)
+    const access = await requireTicketAccess(user.id, projectId, existingTicket, 'edit')
 
     const body = await request.json()
     const parsed = updateTicketSchema.safeParse(body)
@@ -157,6 +158,15 @@ export async function PATCH(
     }
 
     const { labelIds, watcherIds, reporterId, ...updateData } = parsed.data
+
+    // Assignees may edit the ticket but not take over its reporter: becoming the
+    // reporter would also grant delete rights through tickets.manage_own.
+    if (access === 'assigned' && reporterId !== undefined && reporterId !== existingTicket.creatorId) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only the reporter or a ticket manager can change the reporter' },
+        { status: 403 },
+      )
+    }
 
     // If changing column, verify new column belongs to project
     if (updateData.columnId && updateData.columnId !== existingTicket.columnId) {

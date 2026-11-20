@@ -13,8 +13,8 @@ import {
 
 describe('Permission Constants', () => {
   describe('PERMISSIONS', () => {
-    it('should have 13 defined permissions', () => {
-      expect(Object.keys(PERMISSIONS)).toHaveLength(13)
+    it('should have 14 defined permissions', () => {
+      expect(Object.keys(PERMISSIONS)).toHaveLength(14)
     })
 
     it('should have correct permission string format', () => {
@@ -32,6 +32,7 @@ describe('Permission Constants', () => {
       expect(PERMISSIONS.BOARD_MANAGE).toBe('board.manage')
       expect(PERMISSIONS.TICKETS_CREATE).toBe('tickets.create')
       expect(PERMISSIONS.TICKETS_MANAGE_OWN).toBe('tickets.manage_own')
+      expect(PERMISSIONS.TICKETS_MANAGE_ASSIGNED).toBe('tickets.manage_assigned')
       expect(PERMISSIONS.TICKETS_MANAGE_ANY).toBe('tickets.manage_any')
       expect(PERMISSIONS.SPRINTS_MANAGE).toBe('sprints.manage')
       expect(PERMISSIONS.LABELS_MANAGE).toBe('labels.manage')
@@ -42,7 +43,7 @@ describe('Permission Constants', () => {
 
   describe('ALL_PERMISSIONS', () => {
     it('should be an array of all permission values', () => {
-      expect(ALL_PERMISSIONS).toHaveLength(13)
+      expect(ALL_PERMISSIONS).toHaveLength(14)
       expect(ALL_PERMISSIONS).toContain(PERMISSIONS.TICKETS_CREATE)
       expect(ALL_PERMISSIONS).toContain(PERMISSIONS.PROJECT_DELETE)
     })
@@ -204,6 +205,7 @@ describe('Permission Constants', () => {
 
       expect(ticketPermissions).toContain('tickets.create')
       expect(ticketPermissions).toContain('tickets.manage_own')
+      expect(ticketPermissions).toContain('tickets.manage_assigned')
       expect(ticketPermissions).toContain('tickets.manage_any')
     })
 

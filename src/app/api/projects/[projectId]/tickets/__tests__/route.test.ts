@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { requireMembership } from '@/lib/auth-helpers'
+import { requireMembership, requireTicketsAccess } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { validateColumnInProject } from '@/lib/ticket-mutations-server'
 import { GET, PATCH } from '../route'
@@ -10,6 +10,7 @@ vi.mock('@/lib/auth-helpers', () => ({
   requireMembership: vi.fn().mockResolvedValue(undefined),
   requirePermission: vi.fn().mockResolvedValue(undefined),
   requireTicketPermission: vi.fn().mockResolvedValue(undefined),
+  requireTicketsAccess: vi.fn().mockResolvedValue(undefined),
 }))
 vi.mock('@/lib/db', () => ({
   db: {
@@ -110,5 +111,24 @@ describe('PATCH /api/projects/[projectId]/tickets (batch move)', () => {
     })
     expect(res.status).toBe(400)
     expect((await res.json()).error).toContain('not found or do not belong')
+  })
+
+  it('checks edit access per ticket (creator/assignee) instead of requiring manage_any', async () => {
+    const tickets = [
+      { id: 't1', creatorId: 'someone', assigneeId: 'u1', columnId: 'c1', column: { name: 'To Do' } },
+    ]
+    mValidateColumn.mockResolvedValue({ id: 'c2', name: 'In Progress' } as never)
+    mFindMany.mockResolvedValue(tickets as never)
+    vi.mocked(requireTicketsAccess).mockRejectedValue(
+      new Error('Forbidden: Missing permission to modify this resource'),
+    )
+
+    const res = await PATCH(patchReq({ ticketIds: ['t1'], toColumnId: 'c2', newOrder: 0 }), {
+      params,
+    })
+
+    expect(requireTicketsAccess).toHaveBeenCalledWith('u1', 'PUNT', tickets, 'edit')
+    expect(mFindMany.mock.calls[0][0].select).toMatchObject({ creatorId: true, assigneeId: true })
+    expect(res.status).toBe(403)
   })
 })

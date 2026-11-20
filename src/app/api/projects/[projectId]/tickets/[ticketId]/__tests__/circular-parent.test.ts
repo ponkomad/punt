@@ -31,6 +31,7 @@ vi.mock('@/lib/auth-helpers', async (importOriginal) => {
     requireAuth: vi.fn(),
     requireProjectByKey: vi.fn().mockImplementation(async (key: string) => key),
     requireTicketPermission: vi.fn(),
+    requireTicketAccess: vi.fn().mockResolvedValue('any'),
   }
 })
 

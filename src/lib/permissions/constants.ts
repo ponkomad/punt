@@ -37,6 +37,7 @@ export const PERMISSIONS = {
   // Ticket Management
   TICKETS_CREATE: 'tickets.create',
   TICKETS_MANAGE_OWN: 'tickets.manage_own',
+  TICKETS_MANAGE_ASSIGNED: 'tickets.manage_assigned',
   TICKETS_MANAGE_ANY: 'tickets.manage_any',
 
   // Sprint Management
@@ -117,6 +118,12 @@ export const PERMISSION_METADATA: Record<Permission, PermissionMeta> = {
     key: PERMISSIONS.TICKETS_MANAGE_OWN,
     label: 'Manage own tickets',
     description: 'Edit and delete tickets you created',
+    category: PERMISSION_CATEGORIES.TICKETS,
+  },
+  [PERMISSIONS.TICKETS_MANAGE_ASSIGNED]: {
+    key: PERMISSIONS.TICKETS_MANAGE_ASSIGNED,
+    label: 'Manage assigned tickets',
+    description: 'Edit and move tickets assigned to you (cannot delete them or change the reporter)',
     category: PERMISSION_CATEGORIES.TICKETS,
   },
   [PERMISSIONS.TICKETS_MANAGE_ANY]: {
