@@ -48,7 +48,7 @@ export function sortTickets(
 ): TicketWithRelations[] {
   if (sortOption === 'manual') {
     // Manual sorting - use the order field
-    return [...tickets].sort((a, b) => a.order - b.order)
+    return [...tickets].sort((a, b) => a.order - b.order || a.number - b.number)
   }
 
   const sorted = [...tickets]

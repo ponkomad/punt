@@ -413,11 +413,14 @@ export function KanbanBoard({
           })
         }
       } else {
+        // In a sorted target column the visual drop position doesn't map to manual order,
+        // so append to the end of the manual order instead of corrupting it.
+        const targetIsSorted = getColumnSort(targetColumnId) !== 'manual'
         moveTicketsAction({
           projectId,
           ticketIds: draggedIds,
           toColumnId: targetColumnId,
-          toIndex: insertIndex,
+          toIndex: targetIsSorted ? undefined : insertIndex,
           tabId,
         })
       }
