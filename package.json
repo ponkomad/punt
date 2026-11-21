@@ -22,6 +22,7 @@
     "test:ci": "vitest run --coverage",
     "test:fuzz": "vitest run src/__tests__/fuzz",
     "db:generate": "prisma generate",
+    "db:migrate-assigned-permission": "tsx prisma/migrate-assigned-permission.ts",
     "db:push": "prisma db push && tsx prisma/create-indexes.ts",
     "db:indexes": "tsx prisma/create-indexes.ts",
     "db:migrate": "prisma migrate dev",

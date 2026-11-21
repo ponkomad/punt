@@ -29,7 +29,8 @@ export const ROLE_DESCRIPTIONS = {
   [DEFAULT_ROLE_NAMES.OWNER]:
     'Full control over the project including deletion and permission management',
   [DEFAULT_ROLE_NAMES.ADMIN]: 'Can manage most project settings, members, and content',
-  [DEFAULT_ROLE_NAMES.MEMBER]: 'Can create tickets and manage their own content',
+  [DEFAULT_ROLE_NAMES.MEMBER]:
+    'Can create tickets and manage their own content and tickets assigned to them',
 } as const
 
 // Default permission sets for each role
@@ -47,6 +48,7 @@ export const ROLE_PRESETS: Record<DefaultRoleName, Permission[]> = {
     PERMISSIONS.BOARD_MANAGE,
     PERMISSIONS.TICKETS_CREATE,
     PERMISSIONS.TICKETS_MANAGE_OWN,
+    PERMISSIONS.TICKETS_MANAGE_ASSIGNED,
     PERMISSIONS.TICKETS_MANAGE_ANY,
     PERMISSIONS.SPRINTS_MANAGE,
     PERMISSIONS.LABELS_MANAGE,
@@ -54,8 +56,12 @@ export const ROLE_PRESETS: Record<DefaultRoleName, Permission[]> = {
     PERMISSIONS.ATTACHMENTS_MANAGE_ANY,
   ],
 
-  // Member: Basic ticket creation and own content management
-  [DEFAULT_ROLE_NAMES.MEMBER]: [PERMISSIONS.TICKETS_CREATE, PERMISSIONS.TICKETS_MANAGE_OWN],
+  // Member: Basic ticket creation, own content and assigned-ticket management
+  [DEFAULT_ROLE_NAMES.MEMBER]: [
+    PERMISSIONS.TICKETS_CREATE,
+    PERMISSIONS.TICKETS_MANAGE_OWN,
+    PERMISSIONS.TICKETS_MANAGE_ASSIGNED,
+  ],
 }
 
 // Position/hierarchy of default roles (lower = higher rank)

@@ -392,19 +392,96 @@ export async function requireResourcePermission(
   throw new Error(`Forbidden: Missing permission to modify this resource`)
 }
 
+const TICKET_PERMISSION_OWN = 'tickets.manage_own' as Permission
+const TICKET_PERMISSION_ASSIGNED = 'tickets.manage_assigned' as Permission
+const TICKET_PERMISSION_ANY = 'tickets.manage_any' as Permission
+const TICKET_FORBIDDEN_MESSAGE = 'Forbidden: Missing permission to modify this resource'
+
+/** How a user is allowed to act on a ticket, from broadest to narrowest. */
+export type TicketAccess = 'any' | 'own' | 'assigned'
+
+export interface TicketOwnership {
+  creatorId: string | null
+  assigneeId: string | null
+}
+
 /**
- * Check ticket edit/delete permissions based on ownership.
+ * Decide whether a user may edit/delete a ticket, and on what grounds.
+ * - `any`: system admin or tickets.manage_any
+ * - `own`: creator with tickets.manage_own (edit + delete)
+ * - `assigned`: assignee with tickets.manage_assigned (edit only)
+ * Returns null when access is denied.
+ */
+export function resolveTicketAccess(
+  permissions: ReadonlySet<Permission>,
+  isSystemAdmin: boolean,
+  userId: string,
+  ticket: TicketOwnership,
+  action: 'edit' | 'delete',
+): TicketAccess | null {
+  if (isSystemAdmin || permissions.has(TICKET_PERMISSION_ANY)) return 'any'
+  if (ticket.creatorId === userId && permissions.has(TICKET_PERMISSION_OWN)) return 'own'
+  if (
+    action === 'edit' &&
+    ticket.assigneeId === userId &&
+    permissions.has(TICKET_PERMISSION_ASSIGNED)
+  ) {
+    return 'assigned'
+  }
+  return null
+}
+
+/**
+ * Require edit/delete access to a single ticket. Returns the access mode so callers
+ * can apply narrower rules (e.g. assignees may not change the reporter).
+ */
+export async function requireTicketAccess(
+  userId: string,
+  projectId: string,
+  ticket: TicketOwnership,
+  action: 'edit' | 'delete',
+): Promise<TicketAccess> {
+  const { permissions, isSystemAdmin } = await getEffectivePermissions(userId, projectId)
+  const access = resolveTicketAccess(permissions, isSystemAdmin, userId, ticket, action)
+  if (!access) throw new Error(TICKET_FORBIDDEN_MESSAGE)
+  return access
+}
+
+/**
+ * Require access to every ticket in a batch (one permission lookup).
+ * The whole batch is rejected if any single ticket is not accessible.
+ */
+export async function requireTicketsAccess(
+  userId: string,
+  projectId: string,
+  tickets: readonly TicketOwnership[],
+  action: 'edit' | 'delete',
+): Promise<void> {
+  const { permissions, isSystemAdmin } = await getEffectivePermissions(userId, projectId)
+  const denied = tickets.some(
+    (ticket) => !resolveTicketAccess(permissions, isSystemAdmin, userId, ticket, action),
+  )
+  if (denied) throw new Error(TICKET_FORBIDDEN_MESSAGE)
+}
+
+/**
+ * Check ticket edit/delete permissions based on ownership or assignment.
+ * Kept for existing callers; prefer requireTicketAccess for new code.
  */
 export async function requireTicketPermission(
   userId: string,
   projectId: string,
   ticketCreatorId: string | null,
-  _action: 'edit' | 'delete',
+  action: 'edit' | 'delete',
+  ticketAssigneeId: string | null = null,
 ) {
-  const ownPermission = 'tickets.manage_own' as Permission
-  const anyPermission = 'tickets.manage_any' as Permission
-
-  return requireResourcePermission(userId, projectId, ticketCreatorId, ownPermission, anyPermission)
+  await requireTicketAccess(
+    userId,
+    projectId,
+    { creatorId: ticketCreatorId, assigneeId: ticketAssigneeId },
+    action,
+  )
+  return true
 }
 
 /**

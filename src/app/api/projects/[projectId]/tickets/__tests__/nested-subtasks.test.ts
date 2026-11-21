@@ -54,6 +54,7 @@ vi.mock('@/lib/auth-helpers', async (importOriginal) => {
     requireMembership: vi.fn().mockResolvedValue(undefined),
     requirePermission: vi.fn().mockResolvedValue(undefined),
     requireTicketPermission: vi.fn().mockResolvedValue(undefined),
+    requireTicketAccess: vi.fn().mockResolvedValue('any'),
   }
 })
 

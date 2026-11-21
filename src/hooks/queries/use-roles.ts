@@ -36,6 +36,7 @@ export function useProjectRoles(projectId: string) {
             'board.manage',
             'tickets.create',
             'tickets.manage_own',
+            'tickets.manage_assigned',
             'tickets.manage_any',
             'sprints.manage',
             'labels.manage',

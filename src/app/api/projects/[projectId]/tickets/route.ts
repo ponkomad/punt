@@ -7,6 +7,7 @@ import {
   requireMembership,
   requirePermission,
   requireProjectByKey,
+  requireTicketsAccess,
 } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { projectEvents } from '@/lib/events'
@@ -302,7 +303,7 @@ const batchMoveTicketsSchema = z.object({
 
 /**
  * PATCH /api/projects/[projectId]/tickets - Batch move tickets to a column
- * Requires project membership and ticket edit permission
+ * Requires edit access to every ticket (manage_any, or own / assigned tickets)
  */
 export async function PATCH(
   request: Request,
@@ -312,9 +313,6 @@ export async function PATCH(
     const user = await requireAuth()
     const { projectId: projectKey } = await params
     const projectId = await requireProjectByKey(projectKey)
-
-    // Check ticket manage permission
-    await requirePermission(user.id, projectId, PERMISSIONS.TICKETS_MANAGE_ANY)
 
     const body = await request.json()
     const parsed = batchMoveTicketsSchema.safeParse(body)
@@ -340,6 +338,8 @@ export async function PATCH(
         columnId: true,
         resolution: true,
         order: true,
+        creatorId: true,
+        assigneeId: true,
         column: { select: { name: true, icon: true, color: true } },
       },
       orderBy: { order: 'asc' },
@@ -348,6 +348,10 @@ export async function PATCH(
     if (tickets.length !== ticketIds.length) {
       return badRequestError('One or more tickets not found or do not belong to project')
     }
+
+    // Every moved ticket must be editable by the user: manage_any, or created by /
+    // assigned to them with manage_own / manage_assigned
+    await requireTicketsAccess(user.id, projectId, tickets, 'edit')
 
     // Update all tickets in a transaction
     const updatedTickets = await db.$transaction(async (tx) => {

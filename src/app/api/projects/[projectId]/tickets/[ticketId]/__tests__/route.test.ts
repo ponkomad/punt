@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { requireMembership, requireTicketPermission } from '@/lib/auth-helpers'
+import { requireMembership, requireTicketAccess, requireTicketPermission } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
-import { DELETE, GET } from '../route'
+import { DELETE, GET, PATCH } from '../route'
 
 vi.mock('@/lib/auth-helpers', () => ({
   requireAuth: vi.fn().mockResolvedValue({ id: 'u1' }),
@@ -9,6 +9,7 @@ vi.mock('@/lib/auth-helpers', () => ({
   requireMembership: vi.fn().mockResolvedValue(undefined),
   requirePermission: vi.fn().mockResolvedValue(undefined),
   requireTicketPermission: vi.fn().mockResolvedValue(undefined),
+  requireTicketAccess: vi.fn().mockResolvedValue('any'),
 }))
 vi.mock('@/lib/db', () => ({
   db: {
@@ -99,5 +100,48 @@ describe('DELETE /api/projects/[projectId]/tickets/[ticketId]', () => {
     const res = await DELETE(delReq(), { params })
     expect(res.status).toBe(403)
     expect(mDelete).not.toHaveBeenCalled()
+  })
+})
+
+describe('PATCH /api/projects/[projectId]/tickets/[ticketId] - assignee access (PUNT-7)', () => {
+  const existing = {
+    id: 't1',
+    creatorId: 'someone-else',
+    assigneeId: 'u1',
+    columnId: 'c1',
+    resolution: null,
+    column: { name: 'To Do', icon: null, color: null },
+    labels: [],
+  }
+  const patchReq = (body: unknown) =>
+    new Request('http://localhost/x', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+
+  it('checks access with both the creator and the assignee of the ticket', async () => {
+    mFindFirst.mockResolvedValue(existing as never)
+    vi.mocked(requireTicketAccess).mockRejectedValue(new Error('Forbidden: nope'))
+
+    const res = await PATCH(patchReq({ title: 'x' }), { params })
+
+    expect(requireTicketAccess).toHaveBeenCalledWith(
+      'u1',
+      'PUNT',
+      expect.objectContaining({ creatorId: 'someone-else', assigneeId: 'u1' }),
+      'edit',
+    )
+    expect(res.status).toBe(403)
+  })
+
+  it('forbids an assignee (without own/any access) from changing the reporter', async () => {
+    mFindFirst.mockResolvedValue(existing as never)
+    vi.mocked(requireTicketAccess).mockResolvedValue('assigned')
+
+    const res = await PATCH(patchReq({ reporterId: 'u1' }), { params })
+
+    expect(res.status).toBe(403)
+    expect((await res.json()).error).toMatch(/reporter/i)
   })
 })
